@@ -47,6 +47,19 @@
                 <label for="ghi_chu" class="form-label">Ghi chú</label>
                 <textarea class="form-control" id="ghi_chu" name="ghi_chu" rows="3">{{ phong.ghi_chu }}</textarea>
             </div>
+
+            <hr>
+            <h5>Thông tin nhật ký</h5>
+            
+            <div class="mb-3">
+                <label for="nguoi_thuc_hien" class="form-label">Người thực hiện</label>
+                <input type="text" class="form-control" id="nguoi_thuc_hien" name="nguoi_thuc_hien" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="mo_ta_nhat_ky" class="form-label">Mô tả công việc</label>
+                <textarea class="form-control" id="mo_ta_nhat_ky" name="mo_ta_nhat_ky" rows="2"></textarea>
+            </div>
             
             <button type="submit" class="btn btn-primary">Cập nhật</button>
             <a href="{{ url_for('chi_tiet_phong', id=phong.id) }}" class="btn btn-secondary">Hủy</a>
