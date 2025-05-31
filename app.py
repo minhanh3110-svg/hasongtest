@@ -16,6 +16,21 @@ class MauCayMo(db.Model):
     mo_ta = db.Column(db.Text, nullable=True)
     trang_thai = db.Column(db.String(50), nullable=False)
 
+# Khởi tạo database
+def init_db():
+    with app.app_context():
+        db.create_all()
+        # Kiểm tra xem đã có dữ liệu mẫu chưa
+        if not MauCayMo.query.first():
+            mau_demo = MauCayMo(
+                ten_mau='Mẫu Demo',
+                loai_cay='Cây Lan',
+                mo_ta='Mẫu thử nghiệm',
+                trang_thai='Mới tạo'
+            )
+            db.session.add(mau_demo)
+            db.session.commit()
+
 @app.route('/')
 def trang_chu():
     mau_cay_mo = MauCayMo.query.all()
@@ -42,8 +57,9 @@ def them_mau():
     
     return render_template('them_mau.html')
 
+# Khởi tạo database khi khởi động ứng dụng
+init_db()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port) 
