@@ -19,6 +19,16 @@
             </div>
             
             <div class="mb-3">
+                <label for="phong_id" class="form-label">Phòng nuôi cấy</label>
+                <select class="form-select" id="phong_id" name="phong_id">
+                    <option value="">-- Chọn phòng --</option>
+                    {% for phong in phong_list %}
+                    <option value="{{ phong.id }}">{{ phong.ten_phong }} ({{ phong.trang_thai }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
                 <label for="mo_ta" class="form-label">Mô tả</label>
                 <textarea class="form-control" id="mo_ta" name="mo_ta" rows="3"></textarea>
             </div>
