@@ -28,6 +28,18 @@ class PhongMoiTruong(db.Model):
     trang_thai = db.Column(db.String(50), nullable=False)
     ghi_chu = db.Column(db.Text, nullable=True)
     cap_nhat = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    nhat_ky = db.relationship('NhatKyPhong', backref='phong', lazy='dynamic')
+
+class NhatKyPhong(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phong_id = db.Column(db.Integer, db.ForeignKey('phong_moi_truong.id'), nullable=False)
+    thoi_gian = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    hanh_dong = db.Column(db.String(100), nullable=False)
+    mo_ta = db.Column(db.Text, nullable=True)
+    nguoi_thuc_hien = db.Column(db.String(100), nullable=False)
+    nhiet_do = db.Column(db.Float, nullable=True)
+    do_am = db.Column(db.Float, nullable=True)
+    anh_sang = db.Column(db.Float, nullable=True)
 
 # Khởi tạo database
 def init_db():
@@ -44,6 +56,19 @@ def init_db():
                 ghi_chu='Phòng nuôi cấy mô thực vật'
             )
             db.session.add(phong_mau)
+            db.session.commit()
+            
+            # Thêm nhật ký mẫu
+            nhat_ky_mau = NhatKyPhong(
+                phong_id=phong_mau.id,
+                hanh_dong='Khởi tạo phòng',
+                mo_ta='Thiết lập các thông số ban đầu cho phòng',
+                nguoi_thuc_hien='Admin',
+                nhiet_do=25.0,
+                do_am=70.0,
+                anh_sang=1000.0
+            )
+            db.session.add(nhat_ky_mau)
             db.session.commit()
         
         # Kiểm tra và thêm mẫu cấy demo
@@ -105,6 +130,20 @@ def them_phong():
         )
         db.session.add(phong_moi)
         db.session.commit()
+
+        # Thêm nhật ký
+        nhat_ky = NhatKyPhong(
+            phong_id=phong_moi.id,
+            hanh_dong='Tạo phòng mới',
+            mo_ta=f'Khởi tạo phòng {phong_moi.ten_phong}',
+            nguoi_thuc_hien=request.form.get('nguoi_thuc_hien', 'Admin'),
+            nhiet_do=phong_moi.nhiet_do,
+            do_am=phong_moi.do_am,
+            anh_sang=phong_moi.anh_sang
+        )
+        db.session.add(nhat_ky)
+        db.session.commit()
+
         return redirect(url_for('danh_sach_phong'))
     
     return render_template('phong_moi_truong/them.html')
@@ -112,22 +151,48 @@ def them_phong():
 @app.route('/phong-moi-truong/<int:id>')
 def chi_tiet_phong(id):
     phong = PhongMoiTruong.query.get_or_404(id)
-    return render_template('phong_moi_truong/chi_tiet.html', phong=phong)
+    nhat_ky = NhatKyPhong.query.filter_by(phong_id=id).order_by(NhatKyPhong.thoi_gian.desc()).all()
+    return render_template('phong_moi_truong/chi_tiet.html', phong=phong, nhat_ky=nhat_ky)
 
 @app.route('/phong-moi-truong/<int:id>/cap-nhat', methods=['GET', 'POST'])
 def cap_nhat_phong(id):
     phong = PhongMoiTruong.query.get_or_404(id)
     if request.method == 'POST':
-        phong.nhiet_do = float(request.form['nhiet_do'])
-        phong.do_am = float(request.form['do_am'])
-        phong.anh_sang = float(request.form['anh_sang'])
-        phong.trang_thai = request.form['trang_thai']
+        nhiet_do_moi = float(request.form['nhiet_do'])
+        do_am_moi = float(request.form['do_am'])
+        anh_sang_moi = float(request.form['anh_sang'])
+        trang_thai_moi = request.form['trang_thai']
+        
+        # Cập nhật thông tin phòng
+        phong.nhiet_do = nhiet_do_moi
+        phong.do_am = do_am_moi
+        phong.anh_sang = anh_sang_moi
+        phong.trang_thai = trang_thai_moi
         phong.ghi_chu = request.form['ghi_chu']
         phong.cap_nhat = datetime.utcnow()
+        
+        # Thêm nhật ký
+        nhat_ky = NhatKyPhong(
+            phong_id=phong.id,
+            hanh_dong='Cập nhật thông số',
+            mo_ta=request.form.get('mo_ta_nhat_ky', 'Cập nhật thông số môi trường'),
+            nguoi_thuc_hien=request.form.get('nguoi_thuc_hien', 'Admin'),
+            nhiet_do=nhiet_do_moi,
+            do_am=do_am_moi,
+            anh_sang=anh_sang_moi
+        )
+        
+        db.session.add(nhat_ky)
         db.session.commit()
         return redirect(url_for('chi_tiet_phong', id=id))
     
     return render_template('phong_moi_truong/cap_nhat.html', phong=phong)
+
+@app.route('/phong-moi-truong/<int:id>/nhat-ky')
+def nhat_ky_phong(id):
+    phong = PhongMoiTruong.query.get_or_404(id)
+    nhat_ky = NhatKyPhong.query.filter_by(phong_id=id).order_by(NhatKyPhong.thoi_gian.desc()).all()
+    return render_template('phong_moi_truong/nhat_ky.html', phong=phong, nhat_ky=nhat_ky)
 
 # Khởi tạo database khi khởi động ứng dụng
 init_db()
