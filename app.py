@@ -1,37 +1,41 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 from sqlalchemy import func
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///nuoi_cay_mo.db'
+app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 # Models
-class Phong(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ten = db.Column(db.String(100), nullable=False)
-    mo_ta = db.Column(db.Text)
-    mau = db.relationship('Mau', backref='phong', lazy=True)
-
 class Mau(db.Model):
+    __tablename__ = 'mau'
     id = db.Column(db.Integer, primary_key=True)
+    ma_mau = db.Column(db.String(50), unique=True, nullable=False)
     ten = db.Column(db.String(100), nullable=False)
     mo_ta = db.Column(db.Text)
     ngay_cay = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    trang_thai = db.Column(db.String(50), nullable=False, default='Mới tạo')
+    trang_thai = db.Column(db.String(50))
     phong_id = db.Column(db.Integer, db.ForeignKey('phong.id'), nullable=False)
-    nhat_ky = db.relationship('NhatKy', backref='mau', lazy=True)
+
+class Phong(db.Model):
+    __tablename__ = 'phong'
+    id = db.Column(db.Integer, primary_key=True)
+    ten_phong = db.Column(db.String(100), nullable=False)
+    nhiet_do = db.Column(db.Float)
+    do_am = db.Column(db.Float)
+    mau_list = db.relationship('Mau', backref='phong', lazy=True)
 
 class NhatKy(db.Model):
+    __tablename__ = 'nhat_ky'
     id = db.Column(db.Integer, primary_key=True)
-    noi_dung = db.Column(db.Text, nullable=False)
-    ngay_ghi = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     mau_id = db.Column(db.Integer, db.ForeignKey('mau.id'), nullable=False)
+    ngay_ghi = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    noi_dung = db.Column(db.Text, nullable=False)
 
 # Jinja filters
 @app.template_filter('status_color')
@@ -79,7 +83,7 @@ def index():
     
     # Thống kê theo phòng
     room_stats = db.session.query(
-        Phong.ten.label('name'),
+        Phong.ten_phong.label('name'),
         func.count(Mau.id).label('count')
     ).join(Mau).group_by(Phong.id).all()
     
@@ -95,63 +99,54 @@ def index():
 @app.route('/them-mau-moi', methods=['GET', 'POST'])
 def them_mau_moi():
     if request.method == 'POST':
+        ma_mau = request.form.get('ma_mau')
         ten = request.form.get('ten')
         mo_ta = request.form.get('mo_ta')
         phong_id = request.form.get('phong_id')
         
-        if not all([ten, phong_id]):
+        if not all([ma_mau, ten, phong_id]):
             flash('Vui lòng điền đầy đủ thông tin bắt buộc', 'error')
             return redirect(url_for('them_mau_moi'))
         
-        mau = Mau(
-            ten=ten,
-            mo_ta=mo_ta,
-            phong_id=phong_id
-        )
-        
         try:
-            db.session.add(mau)
+            mau_moi = Mau(
+                ma_mau=ma_mau,
+                ten=ten,
+                mo_ta=mo_ta,
+                phong_id=phong_id,
+                trang_thai='Mới'
+            )
+            db.session.add(mau_moi)
             db.session.commit()
             flash('Thêm mẫu mới thành công!', 'success')
             return redirect(url_for('index'))
-        except:
+        except Exception as e:
             db.session.rollback()
-            flash('Có lỗi xảy ra khi thêm mẫu mới', 'error')
+            flash(f'Có lỗi xảy ra: {str(e)}', 'error')
+            return redirect(url_for('them_mau_moi'))
     
-    phong = Phong.query.all()
-    return render_template('them_mau_moi.html', phong=phong)
+    phong_list = Phong.query.all()
+    return render_template('them_mau_moi.html', phong_list=phong_list)
 
 @app.route('/cap-nhat-mau/<int:id>', methods=['GET', 'POST'])
 def cap_nhat_mau(id):
     mau = Mau.query.get_or_404(id)
-    
     if request.method == 'POST':
-        mau.ten = request.form.get('ten')
-        mau.mo_ta = request.form.get('mo_ta')
-        mau.trang_thai = request.form.get('trang_thai')
-        mau.phong_id = request.form.get('phong_id')
-        
         try:
+            mau.ten = request.form.get('ten')
+            mau.mo_ta = request.form.get('mo_ta')
+            mau.trang_thai = request.form.get('trang_thai')
+            mau.phong_id = request.form.get('phong_id')
+            
             db.session.commit()
-            
-            # Thêm nhật ký nếu có ghi chú
-            ghi_chu = request.form.get('ghi_chu')
-            if ghi_chu:
-                nhat_ky = NhatKy(
-                    noi_dung=ghi_chu,
-                    mau_id=mau.id
-                )
-                db.session.add(nhat_ky)
-                db.session.commit()
-            
             flash('Cập nhật mẫu thành công!', 'success')
             return redirect(url_for('index'))
-        except:
+        except Exception as e:
             db.session.rollback()
-            flash('Có lỗi xảy ra khi cập nhật mẫu', 'error')
+            flash(f'Có lỗi xảy ra: {str(e)}', 'error')
     
-    phong = Phong.query.all()
-    return render_template('cap_nhat_mau.html', mau=mau, phong=phong)
+    phong_list = Phong.query.all()
+    return render_template('cap_nhat_mau.html', mau=mau, phong_list=phong_list)
 
 @app.route('/chi-tiet-mau/<int:id>')
 def chi_tiet_mau(id):
@@ -161,47 +156,79 @@ def chi_tiet_mau(id):
 @app.route('/xoa-mau/<int:id>')
 def xoa_mau(id):
     mau = Mau.query.get_or_404(id)
-    
     try:
         db.session.delete(mau)
         db.session.commit()
         flash('Xóa mẫu thành công!', 'success')
-    except:
+    except Exception as e:
         db.session.rollback()
-        flash('Có lỗi xảy ra khi xóa mẫu', 'error')
-    
+        flash(f'Có lỗi xảy ra: {str(e)}', 'error')
     return redirect(url_for('index'))
 
 @app.route('/phong-moi-truong')
 def phong_moi_truong():
-    phong = Phong.query.all()
-    return render_template('phong_moi_truong.html', phong=phong)
+    phong_list = Phong.query.all()
+    return render_template('phong_moi_truong/index.html', phong_list=phong_list)
 
 @app.route('/them-phong-moi', methods=['GET', 'POST'])
 def them_phong_moi():
     if request.method == 'POST':
-        ten = request.form.get('ten')
-        mo_ta = request.form.get('mo_ta')
+        ten_phong = request.form.get('ten_phong')
+        nhiet_do = request.form.get('nhiet_do')
+        do_am = request.form.get('do_am')
         
-        if not ten:
+        if not ten_phong:
             flash('Vui lòng nhập tên phòng', 'error')
             return redirect(url_for('them_phong_moi'))
         
-        phong = Phong(
-            ten=ten,
-            mo_ta=mo_ta
-        )
-        
         try:
-            db.session.add(phong)
+            phong_moi = Phong(
+                ten_phong=ten_phong,
+                nhiet_do=float(nhiet_do) if nhiet_do else None,
+                do_am=float(do_am) if do_am else None
+            )
+            db.session.add(phong_moi)
             db.session.commit()
             flash('Thêm phòng mới thành công!', 'success')
             return redirect(url_for('phong_moi_truong'))
-        except:
+        except Exception as e:
             db.session.rollback()
-            flash('Có lỗi xảy ra khi thêm phòng mới', 'error')
+            flash(f'Có lỗi xảy ra: {str(e)}', 'error')
+            return redirect(url_for('them_phong_moi'))
     
-    return render_template('them_phong_moi.html')
+    return render_template('phong_moi_truong/them_phong.html')
+
+@app.route('/them-nhat-ky/<int:mau_id>', methods=['POST'])
+def them_nhat_ky(mau_id):
+    noi_dung = request.form.get('noi_dung')
+    if not noi_dung:
+        flash('Vui lòng nhập nội dung nhật ký', 'error')
+        return redirect(url_for('index'))
+    
+    try:
+        nhat_ky = NhatKy(mau_id=mau_id, noi_dung=noi_dung)
+        db.session.add(nhat_ky)
+        db.session.commit()
+        flash('Thêm nhật ký thành công!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Có lỗi xảy ra: {str(e)}', 'error')
+    
+    return redirect(url_for('index'))
+
+@app.route('/api/cap-nhat-moi-truong/<int:phong_id>', methods=['POST'])
+def cap_nhat_moi_truong(phong_id):
+    phong = Phong.query.get_or_404(phong_id)
+    data = request.get_json()
+    
+    try:
+        phong.nhiet_do = data.get('nhiet_do')
+        phong.do_am = data.get('do_am')
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)})
 
 if __name__ == '__main__':
     with app.app_context():

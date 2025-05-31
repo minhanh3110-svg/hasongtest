@@ -8,17 +8,26 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-white">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
-                <div class="logo-container">
-                    <div class="logo-circle">
-                        <span class="logo-text">GS</span>
+                <div class="logo-wrapper">
+                    <div class="logo-container">
+                        <div class="logo-circle">
+                            <div class="logo-f"></div>
+                            <div class="logo-g"></div>
+                            <div class="logo-dot"></div>
+                            <div class="logo-ring"></div>
+                        </div>
+                    </div>
+                    <div class="brand-text-container">
+                        <span class="brand-text">Green Straw Hat</span>
+                        <span class="tagline">Happiness Together</span>
                     </div>
                 </div>
-                <span class="brand-text">Green Straw Hat</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -51,17 +60,6 @@
     </nav>
 
     <div class="container my-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
         {% block content %}{% endblock %}
     </div>
 
@@ -69,30 +67,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.js"></script>
-    <script>
-        toastr.options = {
-            "closeButton": true,
-            "progressBar": true,
-            "positionClass": "toast-top-right",
-            "timeOut": "3000"
-        };
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    {% if category == 'success' %}
-                        toastr.success('{{ message }}');
-                    {% elif category == 'error' %}
-                        toastr.error('{{ message }}');
-                    {% elif category == 'warning' %}
-                        toastr.warning('{{ message }}');
-                    {% else %}
-                        toastr.info('{{ message }}');
-                    {% endif %}
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        showToast('{{ category }}', '{{ message }}');
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        });
+    </script>
 </body>
 </html> 
