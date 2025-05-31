@@ -3,16 +3,19 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 from sqlalchemy import func
-from dotenv import load_dotenv
-
-load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///database.db')
-if app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Cấu hình database
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config.update(
+    SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
+    SQLALCHEMY_DATABASE_URI=database_url,
+    SQLALCHEMY_TRACK_MODIFICATIONS=False
+)
 
 db = SQLAlchemy(app)
 
@@ -30,7 +33,7 @@ class Mau(db.Model):
 class Phong(db.Model):
     __tablename__ = 'phong'
     id = db.Column(db.Integer, primary_key=True)
-    ten_phong = db.Column(db.String(100), nullable=False)
+    ten = db.Column(db.String(100), nullable=False)
     nhiet_do = db.Column(db.Float)
     do_am = db.Column(db.Float)
     mau_list = db.relationship('Mau', backref='phong', lazy=True)
@@ -42,13 +45,13 @@ class NhatKy(db.Model):
     ngay_ghi = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     noi_dung = db.Column(db.Text, nullable=False)
 
-# Jinja filters
+# Template filters
 @app.template_filter('status_color')
 def status_color(status):
     colors = {
-        'Mới tạo': 'success',
-        'Đang phát triển': 'primary',
-        'Đã hoàn thành': 'warning',
+        'Mới': 'primary',
+        'Đang phát triển': 'info',
+        'Hoàn thành': 'success',
         'Thất bại': 'danger'
     }
     return colors.get(status, 'secondary')
@@ -59,47 +62,27 @@ def index():
     page = request.args.get('page', 1, type=int)
     per_page = 9
     
-    # Lấy các tham số tìm kiếm
-    search = request.args.get('search', '')
-    status = request.args.get('status', '')
-    room = request.args.get('room', '')
-    
-    # Query cơ bản
-    query = Mau.query
-    
-    # Áp dụng các bộ lọc
-    if search:
-        query = query.filter(Mau.ten.ilike(f'%{search}%'))
-    if status:
-        query = query.filter(Mau.trang_thai == status)
-    if room:
-        query = query.filter(Mau.phong_id == room)
-    
-    # Phân trang
-    mau_pagination = query.order_by(Mau.ngay_cay.desc()).paginate(page=page, per_page=per_page)
-    
-    # Thống kê trạng thái
+    # Lấy thống kê
     stats = {
-        'new_count': Mau.query.filter_by(trang_thai='Mới tạo').count(),
+        'new_count': Mau.query.filter_by(trang_thai='Mới').count(),
         'developing_count': Mau.query.filter_by(trang_thai='Đang phát triển').count(),
-        'completed_count': Mau.query.filter_by(trang_thai='Đã hoàn thành').count(),
+        'completed_count': Mau.query.filter_by(trang_thai='Hoàn thành').count(),
         'failed_count': Mau.query.filter_by(trang_thai='Thất bại').count()
     }
     
-    # Thống kê theo phòng
+    # Lấy thống kê theo phòng
     room_stats = db.session.query(
-        Phong.ten_phong.label('name'),
+        Phong.ten.label('name'),
         func.count(Mau.id).label('count')
-    ).join(Mau).group_by(Phong.id).all()
+    ).outerjoin(Mau).group_by(Phong.id, Phong.ten).all()
     
-    # Lấy danh sách phòng cho bộ lọc
-    rooms = Phong.query.all()
+    # Lấy danh sách mẫu có phân trang
+    mau_pagination = Mau.query.order_by(Mau.ngay_cay.desc()).paginate(page=page, per_page=per_page)
     
     return render_template('index.html',
                          mau_pagination=mau_pagination,
                          stats=stats,
-                         room_stats=room_stats,
-                         rooms=rooms)
+                         room_stats=room_stats)
 
 @app.route('/them-mau-moi', methods=['GET', 'POST'])
 def them_mau_moi():
@@ -153,11 +136,6 @@ def cap_nhat_mau(id):
     phong_list = Phong.query.all()
     return render_template('cap_nhat_mau.html', mau=mau, phong_list=phong_list)
 
-@app.route('/chi-tiet-mau/<int:id>')
-def chi_tiet_mau(id):
-    mau = Mau.query.get_or_404(id)
-    return render_template('chi_tiet_mau.html', mau=mau)
-
 @app.route('/xoa-mau/<int:id>')
 def xoa_mau(id):
     mau = Mau.query.get_or_404(id)
@@ -173,7 +151,7 @@ def xoa_mau(id):
 @app.route('/phong-moi-truong')
 def phong_moi_truong():
     phong_list = Phong.query.all()
-    return render_template('phong_moi_truong/index.html', phong_list=phong_list)
+    return render_template('phong_moi_truong.html', phong_list=phong_list)
 
 @app.route('/them-phong-moi', methods=['GET', 'POST'])
 def them_phong_moi():
@@ -188,7 +166,7 @@ def them_phong_moi():
         
         try:
             phong_moi = Phong(
-                ten_phong=ten_phong,
+                ten=ten_phong,
                 nhiet_do=float(nhiet_do) if nhiet_do else None,
                 do_am=float(do_am) if do_am else None
             )
@@ -201,25 +179,7 @@ def them_phong_moi():
             flash(f'Có lỗi xảy ra: {str(e)}', 'error')
             return redirect(url_for('them_phong_moi'))
     
-    return render_template('phong_moi_truong/them_phong.html')
-
-@app.route('/them-nhat-ky/<int:mau_id>', methods=['POST'])
-def them_nhat_ky(mau_id):
-    noi_dung = request.form.get('noi_dung')
-    if not noi_dung:
-        flash('Vui lòng nhập nội dung nhật ký', 'error')
-        return redirect(url_for('index'))
-    
-    try:
-        nhat_ky = NhatKy(mau_id=mau_id, noi_dung=noi_dung)
-        db.session.add(nhat_ky)
-        db.session.commit()
-        flash('Thêm nhật ký thành công!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Có lỗi xảy ra: {str(e)}', 'error')
-    
-    return redirect(url_for('index'))
+    return render_template('them_phong_moi.html')
 
 @app.route('/api/cap-nhat-moi-truong/<int:phong_id>', methods=['POST'])
 def cap_nhat_moi_truong(phong_id):
@@ -236,6 +196,4 @@ def cap_nhat_moi_truong(phong_id):
         return jsonify({'status': 'error', 'message': str(e)})
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True) 
