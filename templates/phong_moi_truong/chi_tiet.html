@@ -57,29 +57,6 @@
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Nhật ký gần đây</h5>
-            <a href="{{ url_for('nhat_ky_phong', id=phong.id) }}" class="btn btn-primary btn-sm">
-                Xem toàn bộ nhật ký
-            </a>
-        </div>
-        <div class="timeline-mini">
-            {% for nk in nhat_ky[:5] %}
-            <div class="timeline-item-mini">
-                <div class="timeline-content-mini">
-                    <small class="text-muted">{{ nk.thoi_gian.strftime('%d/%m/%Y %H:%M') }}</small>
-                    <h6 class="mb-1">{{ nk.hanh_dong }}</h6>
-                    <p class="mb-1">{{ nk.mo_ta }}</p>
-                    <small class="text-muted">Thực hiện bởi: {{ nk.nguoi_thuc_hien }}</small>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
 <div class="card">
     <div class="card-body">
         <h5 class="card-title">Mẫu cấy trong phòng</h5>
@@ -113,39 +90,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block styles %}
-<style>
-.timeline-mini {
-    position: relative;
-    padding: 10px 0;
-}
-
-.timeline-item-mini {
-    position: relative;
-    padding: 10px 0;
-    border-left: 2px solid #e9ecef;
-    margin-left: 10px;
-}
-
-.timeline-content-mini {
-    margin-left: 15px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 4px;
-}
-
-.timeline-item-mini:before {
-    content: '';
-    position: absolute;
-    left: -7px;
-    top: 18px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #0d6efd;
-    border: 2px solid #fff;
-}
-</style>
 {% endblock %} 
