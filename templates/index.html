@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Trang Chủ{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Danh Sách Mẫu Nuôi Cấy</h1>
+
+<div class="row">
+    {% for mau in mau_cay_mo %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ mau.ten_mau }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ mau.loai_cay }}</h6>
+                <p class="card-text">
+                    <strong>Ngày cấy:</strong> {{ mau.ngay_cay.strftime('%d/%m/%Y') }}<br>
+                    <strong>Trạng thái:</strong> {{ mau.trang_thai }}
+                </p>
+                <p class="card-text">{{ mau.mo_ta }}</p>
+                <a href="#" class="btn btn-primary">Chi tiết</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not mau_cay_mo %}
+<div class="alert alert-info">
+    Chưa có mẫu nuôi cấy nào. <a href="{{ url_for('them_mau') }}">Thêm mẫu mới</a>
+</div>
+{% endif %}
+{% endblock %} 

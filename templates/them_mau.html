@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Thêm Mẫu Mới{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Thêm Mẫu Nuôi Cấy Mới</h1>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="ten_mau" class="form-label">Tên mẫu</label>
+                <input type="text" class="form-control" id="ten_mau" name="ten_mau" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="loai_cay" class="form-label">Loại cây</label>
+                <input type="text" class="form-control" id="loai_cay" name="loai_cay" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="mo_ta" class="form-label">Mô tả</label>
+                <textarea class="form-control" id="mo_ta" name="mo_ta" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="trang_thai" class="form-label">Trạng thái</label>
+                <select class="form-select" id="trang_thai" name="trang_thai" required>
+                    <option value="Mới tạo">Mới tạo</option>
+                    <option value="Đang phát triển">Đang phát triển</option>
+                    <option value="Đã hoàn thành">Đã hoàn thành</option>
+                    <option value="Thất bại">Thất bại</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Thêm mẫu</button>
+            <a href="{{ url_for('trang_chu') }}" class="btn btn-secondary">Hủy</a>
+        </form>
+    </div>
+</div>
+{% endblock %} 
