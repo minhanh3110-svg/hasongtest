@@ -4,103 +4,90 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-8">
-        <h1>Danh Sách Mẫu Nuôi Cấy</h1>
+    <div class="col-md-6">
+        <h1 class="mb-4">Danh Sách Mẫu Nuôi Cấy</h1>
     </div>
-    <div class="col-md-4 text-end">
-        <a href="{{ url_for('them_mau') }}" class="btn btn-primary">
+    <div class="col-md-6 text-md-end">
+        <a href="{{ url_for('them_mau_moi') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Thêm Mẫu Mới
         </a>
     </div>
 </div>
 
-<div class="row">
-    {% for mau in mau_cay_mo %}
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title">{{ mau.ten_mau }}</h5>
-                    <span class="badge {% if mau.trang_thai == 'Mới tạo' %}bg-info
-                                     {% elif mau.trang_thai == 'Đang phát triển' %}bg-primary
-                                     {% elif mau.trang_thai == 'Đã hoàn thành' %}bg-success
-                                     {% else %}bg-danger{% endif %}">
-                        {{ mau.trang_thai }}
-                    </span>
-                </div>
-                <h6 class="card-subtitle mb-2 text-muted">
-                    <i class="fas fa-leaf"></i> {{ mau.loai_cay }}
-                </h6>
-                <p class="card-text">{{ mau.mo_ta }}</p>
-                <div class="card-text small text-muted mb-3">
-                    <div><i class="fas fa-calendar"></i> Ngày cấy: {{ mau.ngay_cay.strftime('%d/%m/%Y') }}</div>
-                    {% if mau.phong %}
-                    <div><i class="fas fa-flask"></i> Phòng: {{ mau.phong.ten_phong }}</div>
-                    {% endif %}
-                </div>
-                <div class="card-actions">
-                    <a href="#" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-info-circle"></i> Chi tiết
-                    </a>
-                    <a href="#" class="btn btn-outline-success btn-sm">
-                        <i class="fas fa-edit"></i> Cập nhật
-                    </a>
-                    <a href="#" class="btn btn-outline-danger btn-sm">
-                        <i class="fas fa-trash"></i> Xóa
-                    </a>
-                </div>
+<!-- Bộ lọc -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Tìm kiếm</label>
+                <input type="text" class="form-control" name="search" value="{{ request.args.get('search', '') }}" placeholder="Tên mẫu...">
             </div>
-        </div>
+            <div class="col-md-3">
+                <label class="form-label">Trạng thái</label>
+                <select class="form-select" name="status">
+                    <option value="">Tất cả</option>
+                    <option value="Mới tạo" {% if request.args.get('status') == 'Mới tạo' %}selected{% endif %}>Mới tạo</option>
+                    <option value="Đang phát triển" {% if request.args.get('status') == 'Đang phát triển' %}selected{% endif %}>Đang phát triển</option>
+                    <option value="Đã hoàn thành" {% if request.args.get('status') == 'Đã hoàn thành' %}selected{% endif %}>Đã hoàn thành</option>
+                    <option value="Thất bại" {% if request.args.get('status') == 'Thất bại' %}selected{% endif %}>Thất bại</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Phòng</label>
+                <select class="form-select" name="room">
+                    <option value="">Tất cả</option>
+                    {% for room in rooms %}
+                    <option value="{{ room.id }}" {% if request.args.get('room')|int == room.id %}selected{% endif %}>{{ room.ten }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Tìm kiếm
+                </button>
+            </div>
+        </form>
     </div>
-    {% else %}
-    <div class="col-12">
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> Chưa có mẫu nuôi cấy nào. 
-            <a href="{{ url_for('them_mau') }}" class="alert-link">Thêm mẫu mới</a>
-        </div>
-    </div>
-    {% endfor %}
 </div>
 
-<div class="row mt-4">
+<!-- Thống kê -->
+<div class="row mb-4">
     <div class="col-md-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-chart-pie"></i> Thống kê trạng thái
-                </h5>
-                <div class="status-stats">
+                <h5 class="card-title mb-4">Thống kê trạng thái</h5>
+                <canvas id="statusChart"></canvas>
+                <div class="status-stats mt-3">
                     <div class="status-item">
-                        <span class="badge bg-info">Mới tạo</span>
-                        <span class="count">{{ mau_cay_mo|selectattr('trang_thai', 'equalto', 'Mới tạo')|list|length }}</span>
+                        <span>Mới tạo</span>
+                        <span class="count">{{ stats.new_count }}</span>
                     </div>
                     <div class="status-item">
-                        <span class="badge bg-primary">Đang phát triển</span>
-                        <span class="count">{{ mau_cay_mo|selectattr('trang_thai', 'equalto', 'Đang phát triển')|list|length }}</span>
+                        <span>Đang phát triển</span>
+                        <span class="count">{{ stats.developing_count }}</span>
                     </div>
                     <div class="status-item">
-                        <span class="badge bg-success">Đã hoàn thành</span>
-                        <span class="count">{{ mau_cay_mo|selectattr('trang_thai', 'equalto', 'Đã hoàn thành')|list|length }}</span>
+                        <span>Đã hoàn thành</span>
+                        <span class="count">{{ stats.completed_count }}</span>
                     </div>
                     <div class="status-item">
-                        <span class="badge bg-danger">Thất bại</span>
-                        <span class="count">{{ mau_cay_mo|selectattr('trang_thai', 'equalto', 'Thất bại')|list|length }}</span>
+                        <span>Thất bại</span>
+                        <span class="count">{{ stats.failed_count }}</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-flask"></i> Phân bố theo phòng
-                </h5>
-                <div class="room-stats">
-                    {% for mau in mau_cay_mo|groupby('phong.ten_phong') %}
+                <h5 class="card-title mb-4">Phân bố theo phòng</h5>
+                <canvas id="roomChart"></canvas>
+                <div class="room-stats mt-3">
+                    {% for room in room_stats %}
                     <div class="room-item">
-                        <span class="room-name">{{ mau.grouper or 'Chưa phân phòng' }}</span>
-                        <span class="count">{{ mau.list|length }}</span>
+                        <span class="room-name">{{ room.name }}</span>
+                        <span class="count">{{ room.count }}</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -108,6 +95,164 @@
         </div>
     </div>
 </div>
+
+<!-- Danh sách mẫu -->
+<div class="row">
+    {% for mau in mau_pagination.items %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title d-flex justify-content-between align-items-center">
+                    {{ mau.ten }}
+                    <span class="badge bg-{{ mau.trang_thai|status_color }}">{{ mau.trang_thai }}</span>
+                </h5>
+                <p class="card-text">{{ mau.mo_ta }}</p>
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar"></i> Ngày cấy: {{ mau.ngay_cay.strftime('%d/%m/%Y') }}
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="fas fa-flask"></i> Phòng: {{ mau.phong.ten }}
+                    </small>
+                </div>
+                <div class="card-actions">
+                    <a href="{{ url_for('chi_tiet_mau', id=mau.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-info-circle"></i> Chi tiết
+                    </a>
+                    <a href="{{ url_for('cap_nhat_mau', id=mau.id) }}" class="btn btn-sm btn-outline-warning">
+                        <i class="fas fa-edit"></i> Cập nhật
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ mau.id }})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Phân trang -->
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if mau_pagination.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('index', page=mau_pagination.prev_num) }}">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for page in mau_pagination.iter_pages() %}
+            {% if page %}
+                <li class="page-item {% if page == mau_pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('index', page=page) }}">{{ page }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if mau_pagination.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('index', page=mau_pagination.next_num) }}">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Dữ liệu từ Python
+var statsData = {
+    newCount: {{ stats.new_count }},
+    developingCount: {{ stats.developing_count }},
+    completedCount: {{ stats.completed_count }},
+    failedCount: {{ stats.failed_count }}
+};
+
+var roomStats = {{ room_stats|tojson|safe }};
+
+function confirmDelete(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa mẫu này không?')) {
+        window.location.href = '/xoa-mau/' + id;
+    }
+}
+
+// Biểu đồ trạng thái
+var statusCtx = document.getElementById('statusChart').getContext('2d');
+var statusChart = new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Mới tạo', 'Đang phát triển', 'Đã hoàn thành', 'Thất bại'],
+        datasets: [{
+            data: [
+                statsData.newCount,
+                statsData.developingCount,
+                statsData.completedCount,
+                statsData.failedCount
+            ],
+            backgroundColor: [
+                '#4CAF50',
+                '#2196F3', 
+                '#FFC107',
+                '#F44336'
+            ],
+            label: 'Trạng thái'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                display: true
+            }
+        }
+    }
+});
+
+// Biểu đồ phòng
+var roomCtx = document.getElementById('roomChart').getContext('2d');
+var roomChart = new Chart(roomCtx, {
+    type: 'bar',
+    data: {
+        labels: roomStats.map(function(room) { return room.name; }),
+        datasets: [{
+            label: 'Số mẫu',
+            data: roomStats.map(function(room) { return room.count; }),
+            backgroundColor: '#4CAF50',
+            borderWidth: 1,
+            borderColor: '#388E3C'
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1,
+                    precision: 0
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false,
+                position: 'top'
+            }
+        }
+    }
+});
+</script>
 {% endblock %}
 
 {% block styles %}

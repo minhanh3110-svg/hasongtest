@@ -93,6 +93,9 @@ def index():
         func.count(Mau.id).label('count')
     ).outerjoin(Mau).group_by(Phong.id, Phong.ten).all()
     
+    # Chuyển room_stats thành list of dicts để dễ serialize
+    room_stats = [{'name': r.name, 'count': r.count} for r in room_stats]
+    
     # Lấy danh sách mẫu có phân trang
     mau_pagination = query.order_by(Mau.ngay_cay.desc()).paginate(page=page, per_page=per_page)
     
@@ -173,39 +176,6 @@ def xoa_mau(id):
         db.session.rollback()
         flash(f'Có lỗi xảy ra: {str(e)}', 'error')
     return redirect(url_for('index'))
-
-@app.route('/phong-moi-truong')
-def phong_moi_truong():
-    phong_list = Phong.query.all()
-    return render_template('phong_moi_truong.html', phong_list=phong_list)
-
-@app.route('/them-phong-moi', methods=['GET', 'POST'])
-def them_phong_moi():
-    if request.method == 'POST':
-        ten_phong = request.form.get('ten_phong')
-        nhiet_do = request.form.get('nhiet_do')
-        do_am = request.form.get('do_am')
-        
-        if not ten_phong:
-            flash('Vui lòng nhập tên phòng', 'error')
-            return redirect(url_for('them_phong_moi'))
-        
-        try:
-            phong_moi = Phong(
-                ten=ten_phong,
-                nhiet_do=float(nhiet_do) if nhiet_do else None,
-                do_am=float(do_am) if do_am else None
-            )
-            db.session.add(phong_moi)
-            db.session.commit()
-            flash('Thêm phòng mới thành công!', 'success')
-            return redirect(url_for('phong_moi_truong'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Có lỗi xảy ra: {str(e)}', 'error')
-            return redirect(url_for('them_phong_moi'))
-    
-    return render_template('them_phong_moi.html')
 
 @app.route('/them-nhat-ky/<int:mau_id>', methods=['POST'])
 def them_nhat_ky(mau_id):
