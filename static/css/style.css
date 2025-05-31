@@ -150,4 +150,44 @@ body {
 
 .timeline-item:before {
     background: #4CAF50;
+}
+
+/* Card actions */
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Stats styling */
+.status-stats, .room-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.status-item, .room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.status-item:hover, .room-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.count {
+    font-weight: bold;
+    color: #4CAF50;
+    font-size: 1.1rem;
+}
+
+.room-name {
+    font-weight: 500;
+    color: #333;
 } 
